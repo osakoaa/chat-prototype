@@ -7,35 +7,12 @@ type Message = {
   content: string;
 };
 
-// AIの応答からJSON選択肢を抽出
-function parseOptions(text: string): { text: string; options: string[] | null } {
-  const regex = /```options\s*\n([\s\S]*?)\n```/;
-  const match = text.match(regex);
-  if (!match) {
-    return { text, options: null };
-  }
-  try {
-    const arr = JSON.parse(match[1]);
-    if (Array.isArray(arr) && arr.every((x) => typeof x === "string")) {
-      const cleanedText = text.replace(regex, "").trim();
-      return { text: cleanedText, options: arr };
-    }
-  } catch {
-    // JSON parseに失敗した場合は無視
-  }
-  return { text, options: null };
-}
-
 const WELCOME_MESSAGE = `こんにちは、新規事業開発チームの顧客理解コーチです🙌
 
 アンケートをセルフレビューしながら品質を高めていく、お手伝いをさせていただきます。
 
 まずは、ご担当されている事業について少し教えてください。
-今、どのフェーズにありますか?
-
-\`\`\`options
-["アイデア段階", "プロトタイプ作成中", "リリース済み・改善中", "その他"]
-\`\`\``;
+今、どのフェーズにありますか?(アイデア段階、プロトタイプ作成中、リリース済みなど、自由にお答えください)`;
 
 export default function ChatPanel() {
   const [messages, setMessages] = useState<Message[]>([
@@ -50,15 +27,6 @@ export default function ChatPanel() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
-
-  const latestMessage = messages[messages.length - 1];
-  const showOptions =
-    !isStreaming &&
-    latestMessage?.role === "assistant" &&
-    latestMessage.content.length > 0;
-  const { options: latestOptions } = showOptions
-    ? parseOptions(latestMessage.content)
-    : { options: null };
 
   async function sendMessage(content: string) {
     const trimmed = content.trim();
@@ -126,7 +94,7 @@ export default function ChatPanel() {
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
           </div>
-          <div style={styles.headerTitle}>Chat_Prototype</div>
+          <div style={styles.headerTitle}>Chat_prototype</div>
         </div>
       </header>
 
@@ -142,27 +110,6 @@ export default function ChatPanel() {
             messages[messages.length - 1]?.content === "" && <TypingIndicator />}
         </div>
       </div>
-
-      {/* 選択肢ブロック */}
-      {latestOptions && latestOptions.length > 0 && (
-        <div style={styles.optionsBlock}>
-          <div style={styles.optionsInner}>
-            <div style={styles.optionsLabel}>選択肢をタップ:</div>
-            <div style={styles.optionsList}>
-              {latestOptions.map((opt, i) => (
-                <button
-                  key={i}
-                  style={styles.optionButton}
-                  onClick={() => sendMessage(opt)}
-                  disabled={isStreaming}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 入力エリア */}
       <div style={styles.inputArea}>
@@ -197,7 +144,6 @@ export default function ChatPanel() {
 // ============================================
 function MessageBubble({ message }: { message: Message }) {
   const isUser = message.role === "user";
-  const displayText = isUser ? message.content : parseOptions(message.content).text;
 
   return (
     <div
@@ -212,7 +158,7 @@ function MessageBubble({ message }: { message: Message }) {
           ...(isUser ? styles.bubbleUser : styles.bubbleAi),
         }}
       >
-        {displayText || "\u00A0"}
+        {message.content || "\u00A0"}
       </div>
     </div>
   );
@@ -316,37 +262,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--brand)",
     margin: "0 2px",
     animation: "typing 1.4s infinite",
-  },
-  // 選択肢ブロック
-  optionsBlock: {
-    borderTop: "1px solid var(--border)",
-    background: "var(--panel-bg)",
-    padding: "16px 24px",
-  },
-  optionsInner: {
-    maxWidth: CONTENT_MAX_WIDTH,
-    margin: "0 auto",
-  },
-  optionsLabel: {
-    fontSize: "var(--text--default)",
-    color: "var(--text-muted)",
-    marginBottom: 10,
-  },
-  optionsList: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  optionButton: {
-    textAlign: "left",
-    padding: "10px 16px",
-    background: "var(--brand-lighter)",
-    border: "1px solid var(--brand-light)",
-    color: "var(--brand-hover)",
-    fontSize: "var(--text--large)",
-    borderRadius: 20,
-    transition: "all 0.15s",
-    cursor: "pointer",
   },
   // 入力エリア
   inputArea: {
